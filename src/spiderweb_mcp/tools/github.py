@@ -41,6 +41,29 @@ def register_github_tools(mcp: FastMCP) -> None:
         return f"Comment added to #{issue_number}: {comment.html_url}"
 
     @mcp.tool()
+    def get_issue_comments(repo_name: str, issue_number: int) -> str:
+        """Fetches all comments on a GitHub issue or pull request thread."""
+        gh = get_github_client()
+        repo = gh.get_repo(repo_name)
+        issue = repo.get_issue(issue_number)
+
+        comments = list(issue.get_comments())[:50]  # cap at 50 to avoid huge outputs
+        if not comments:
+            return f"No comments found on #{issue_number}."
+
+        lines = [f"#{issue.number} — Comment thread ({len(comments)} total, showing up to 50):"]
+        for c in comments:
+            author = c.user.login if c.user else "?"
+            created = c.created_at.strftime("%Y-%m-%d %H:%M")
+            lines.append(f"  @{author} · {created}")
+            # Preserve multi-line comment bodies with indentation
+            for body_line in c.body.splitlines():
+                lines.append(f"    {body_line}")
+            lines.append("")  # blank separator between comments
+
+        return "\n".join(lines)
+
+    @mcp.tool()
     def list_github_pull_requests(repo_name: str, state: str = "open") -> str:
         """Lists pull requests for a given repository."""
         gh = get_github_client()
